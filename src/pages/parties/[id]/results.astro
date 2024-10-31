@@ -1,0 +1,138 @@
+---
+import { actions } from "astro:actions";
+
+import TargetItem from "../../../components/parties/TargetItem.astro";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status !== "CLOSE") {
+  return Astro.redirect(`/parties/${partyId}`);
+}
+
+const targetInfos = [
+  {
+    target: "angular",
+    name: "Angular",
+    bgColor: "bg-red-400",
+  },
+  {
+    target: "react",
+    name: "React",
+    bgColor: "bg-blue-400",
+  },
+  {
+    target: "svelte",
+    name: "Svelte",
+    bgColor: "bg-orange-400",
+  },
+  {
+    target: "vue",
+    name: "Vue",
+    bgColor: "bg-green-400",
+  },
+];
+
+const targetInitialValues = await Promise.all(
+  targetInfos.map(async (target) => {
+    return await Astro.callAction(actions.parties.data.get, {
+      id: partyId,
+      target: target.target,
+    }).then((response) => response.data?.value);
+  }),
+);
+
+const targets = targetInfos
+  .map((target, index) => ({
+    target: target.target,
+    name: target.name,
+    bgColor: target.bgColor,
+    initialValue: Number(targetInitialValues[index] || "0"),
+  }))
+  .sort((a, b) => b.initialValue - a.initialValue);
+
+const bestPlayers = await Astro.callAction(actions.parties.data.bestPlayers, {
+  id: partyId,
+});
+---
+
+<head>
+  <title>
+    {party.error ? "Error - Supastro" : `Game - ${party.data?.name} - Supastro`}
+  </title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<div class="h-screen w-screen">
+  {
+    party.error ? (
+      <p>Party error: {party.error.message}</p>
+    ) : (
+      <div class="container mx-auto flex h-full flex-col p-8">
+        <div class="mb-4 flex justify-between">
+          <h1 class="text-4xl">
+            <span id="partyTitle" class="font-bold">
+              {party.data.name}
+            </span>
+            {" - "}
+            Results
+          </h1>
+          <a
+            href="/parties"
+            class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Back
+          </a>
+        </div>
+        <div class="my-auto flex flex-1 flex-col items-center justify-center p-8">
+          <h2 class="mb-4 text-center text-4xl font-bold">
+            {targets[0].name} is the winner!
+          </h2>
+          <div class="mb-16 grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {targets.map((target) => (
+              <TargetItem
+                target={target.target}
+                name={target.name}
+                bgColor={target.bgColor}
+                initialValue={String(target.initialValue)}
+              />
+            ))}
+          </div>
+          <div class="flex flex-col gap-x-16 gap-y-8 md:flex-row">
+            <div>
+              <h3 class="mb-2 text-center text-xl font-bold">Best supporter</h3>
+              <div class="flex flex-col items-center">
+                <img
+                  src={`https://api.multiavatar.com/${bestPlayers.data?.supporter.parties_players?.avatar_id}.svg`}
+                  alt={bestPlayers.data?.supporter.parties_players?.name}
+                  class="relative mb-2 flex size-32 shrink-0 overflow-hidden rounded-full outline outline-2 outline-black"
+                />
+                <p class="text-center font-medium">
+                  {bestPlayers.data?.supporter.parties_players?.name}
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 class="mb-2 text-center text-xl font-bold">Best hater</h3>
+              <div class="flex flex-col items-center">
+                <img
+                  src={`https://api.multiavatar.com/${bestPlayers.data?.hater.parties_players?.avatar_id}.svg`}
+                  alt={bestPlayers.data?.hater.parties_players?.name}
+                  class="relative mb-2 flex size-32 shrink-0 overflow-hidden rounded-full outline outline-2 outline-black"
+                />
+                <p class="text-center font-medium">
+                  {bestPlayers.data?.hater.parties_players?.name}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</div>

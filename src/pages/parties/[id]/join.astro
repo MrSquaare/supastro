@@ -1,0 +1,105 @@
+---
+import type { ActionInputError, ActionError } from "astro:actions";
+import { isInputError, actions } from "astro:actions";
+
+import type { PartiesJoinInput } from "../../../actions/parties/join";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status !== "OPEN") {
+  return Astro.redirect("/parties");
+}
+
+const user = await Astro.callAction(actions.parties.user.get, {
+  partyId: partyId,
+});
+
+if (user.data) {
+  return Astro.redirect(`/parties/${partyId}`);
+}
+
+let joinError: ActionError<PartiesJoinInput> | undefined;
+let formError: ActionInputError<PartiesJoinInput> | undefined;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const { error } = await Astro.callAction(actions.parties.join, {
+    id: partyId,
+    password: formData.get("password") as string,
+  });
+
+  if (error) {
+    joinError = error;
+    formError = isInputError(error) ? error : undefined;
+  } else {
+    return Astro.redirect(`/parties/${partyId}`);
+  }
+}
+---
+
+<head>
+  <title>
+    {party.error ? "Error - Supastro" : `Join - ${party.data?.name} - Supastro`}
+  </title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<div>
+  {
+    party.error ? (
+      <p>{party.error.message}</p>
+    ) : (
+      <div class="flex h-screen w-screen flex-col items-center justify-center">
+        <h1 class="mb-4 text-center text-4xl">
+          <span class="font-bold">{party.data.name}</span> - Join
+        </h1>
+        <div class="w-[350px]">
+          {formError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              Please check the form
+            </div>
+          ) : joinError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              {joinError.code}: {joinError.message}
+            </div>
+          ) : null}
+          <div class="rounded-base border-2 border-border bg-main p-4 text-black shadow-light">
+            <form method="post">
+              <div class="mb-2 space-y-1.5">
+                <label
+                  for="password"
+                  class="text-sm font-heading leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  class="flex h-10 w-full rounded-base border-2 border-border bg-white px-3 py-2 text-sm font-base text-text ring-offset-white selection:bg-main selection:text-black file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formError?.fields.password ? (
+                  <p>{formError.fields.password}</p>
+                ) : null}
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Join
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</div>

@@ -1,0 +1,98 @@
+---
+import { actions } from "astro:actions";
+
+const parties = await Astro.callAction(actions.admin.parties.list, {});
+
+if (parties.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect("/admin/auth/login");
+}
+---
+
+<head>
+  <title>Parties - Admin - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    parties.error ? (
+      <p>{parties.error.message}</p>
+    ) : (
+      <div class="container mx-auto p-8">
+        <div class="mb-4 flex justify-between">
+          <div class="flex items-center gap-4">
+            <h1 class="text-4xl">
+              <span class="font-bold">Admin</span> - Parties
+            </h1>
+            <a
+              href={"/admin/parties/create"}
+              class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            >
+              Create
+            </a>
+          </div>
+          <div class="flex items-center gap-2">
+            <a
+              href="/admin"
+              class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            >
+              Back
+            </a>
+            <form method="post" action={"/admin" + actions.admin.auth.logout}>
+              <button
+                type="submit"
+                class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              >
+                Logout
+              </button>
+            </form>
+          </div>
+        </div>
+        <div>
+          <ul id="parties" class="space-y-4">
+            {parties.data?.map((party) => (
+              <li class="flex items-center gap-2 rounded-base border-2 border-border bg-slate-300 p-4 text-black">
+                <h2 class="text-2xl font-medium">{party.name}</h2>
+                <span class="inline-flex items-center rounded-base border-2 border-border bg-white px-2.5 py-0.5 text-xs font-base text-black transition-colors focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+                  {party.status}
+                </span>
+                <div class="ml-auto space-x-2">
+                  <a
+                    href={`/admin/parties/${party.id}/update`}
+                    class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Update
+                  </a>
+                  <a
+                    href={`/admin/parties/${party.id}/delete`}
+                    class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Delete
+                  </a>
+                  <a
+                    href={`/admin/parties/${party.id}/start`}
+                    class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Start
+                  </a>
+                  <a
+                    href={`/admin/parties/${party.id}/stop`}
+                    class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Stop
+                  </a>
+                  <a
+                    href={`/admin/parties/${party.id}/reset`}
+                    class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Reset
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
+  }
+</body>

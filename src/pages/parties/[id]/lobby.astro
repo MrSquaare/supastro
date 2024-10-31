@@ -1,0 +1,252 @@
+---
+import { actions } from "astro:actions";
+
+import { getPartiesPlayerItemHTML } from "../../../components/parties/player-item";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status !== "OPEN") {
+  return Astro.redirect(`/parties/${partyId}`);
+}
+
+const player = await Astro.callAction(actions.parties.player.get, {
+  partyId: partyId,
+});
+
+if (player.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect(`/parties/${partyId}/join`);
+}
+
+if (player.error?.code === "NOT_FOUND") {
+  return Astro.redirect(`/parties/${partyId}/player`);
+}
+
+const players = await Astro.callAction(actions.parties.players.list, {
+  id: partyId,
+});
+---
+
+<head>
+  <title>
+    {
+      party.error
+        ? "Error - Supastro"
+        : `Lobby - ${party.data?.name} - Supastro`
+    }
+  </title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body class="h-screen w-screen">
+  {
+    player.error ? (
+      <p>Player error: {player.error.message}</p>
+    ) : party.error ? (
+      <p>Party error: {party.error.message}</p>
+    ) : players.error ? (
+      <p>Players error: {players.error.message}</p>
+    ) : (
+      <>
+        <span
+          id="contextData"
+          data-party-id={partyId}
+          data-player-id={player.data.id}
+          class="hidden"
+        />
+        <div class="container mx-auto flex h-full flex-col p-8">
+          <div class="mb-4 flex justify-between">
+            <h1 class="text-4xl">
+              <span id="partyTitle" class="font-bold">
+                {party.data.name}
+              </span>
+              {" - "}
+              Lobby
+            </h1>
+            <div class="flex items-center gap-2">
+              <a
+                href={`/parties/${partyId}/player`}
+                class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              >
+                Player
+              </a>
+              <form method="post" action={`/parties/${partyId}/leave`}>
+                <button
+                  type="submit"
+                  class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Leave
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="flex grow flex-col items-center justify-center p-8">
+            <h2 class="text-center text-6xl font-bold">Waiting to start</h2>
+          </div>
+          <div
+            id="partyPlayers"
+            class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-8"
+          >
+            <Fragment
+              set:html={getPartiesPlayerItemHTML({
+                ...player.data,
+                name: player.data.name + " (You)",
+              })}
+            />
+            {players.data
+              .filter((item) => item.id !== player.data.id)
+              .map((player) => (
+                <Fragment set:html={getPartiesPlayerItemHTML(player)} />
+              ))}
+          </div>
+        </div>
+      </>
+    )
+  }
+</body>
+
+<script>
+  import {
+    REALTIME_LISTEN_TYPES,
+    REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+    type RealtimePostgresChangesPayload,
+  } from "@supabase/supabase-js";
+  import Cookies from "js-cookie";
+
+  import { getPartiesPlayerItemHTML } from "../../../components/parties/player-item";
+  import { supabase } from "../../../lib/supabase/client";
+  import type { Database } from "../../../lib/supabase/types";
+
+  (async () => {
+    const contextData = document.querySelector(
+      "#contextData",
+    ) as HTMLElement | null;
+    const partyId = Number(contextData?.dataset.partyId);
+    const playerId = Number(contextData?.dataset.playerId);
+
+    if (isNaN(partyId) || isNaN(playerId)) {
+      return;
+    }
+
+    const accessToken = Cookies.get(`party_${partyId}_access_token`);
+    const refreshToken = Cookies.get(`party_${partyId}_refresh_token`);
+
+    if (!accessToken || !refreshToken) {
+      window.location.href = `/parties/${partyId}/join`;
+
+      return;
+    }
+
+    await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    const handlePartyRealtime = (
+      payload: RealtimePostgresChangesPayload<
+        Database["public"]["Tables"]["parties"]["Row"]
+      >,
+    ) => {
+      if (payload.eventType === "UPDATE") {
+        if (payload.new.id !== partyId) {
+          return;
+        }
+
+        const title = document.querySelector(
+          "#partyTitle",
+        ) as HTMLElement | null;
+
+        if (title) {
+          title.innerText = payload.new.name;
+        }
+
+        if (payload.new.status !== "OPEN") {
+          window.location.href = `/parties/${partyId}`;
+        }
+      }
+
+      if (payload.eventType === "DELETE") {
+        if (payload.old.id !== partyId) {
+          return;
+        }
+
+        window.location.href = "/parties";
+      }
+    };
+
+    const handlePartyPlayersRealtime = (
+      payload: RealtimePostgresChangesPayload<
+        Database["public"]["Tables"]["parties_players"]["Row"]
+      >,
+    ) => {
+      if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+        if (payload.new.party_id !== partyId) {
+          return;
+        }
+
+        if (!payload.new.name || !payload.new.avatar_id) {
+          return;
+        }
+
+        const playerItem = document.querySelector(
+          `[data-player-item="${payload.new.id}"]`,
+        ) as HTMLElement | null;
+
+        if (playerItem) {
+          playerItem.innerHTML = getPartiesPlayerItemHTML(payload.new);
+        } else {
+          const playerItem = document.createElement("div");
+
+          playerItem.innerHTML = getPartiesPlayerItemHTML(payload.new);
+
+          document.querySelector("#partyPlayers")?.appendChild(playerItem);
+        }
+      }
+
+      if (payload.eventType === "DELETE") {
+        const playerItem = document.querySelector(
+          `[data-player-item="${payload.old.id}"]`,
+        ) as HTMLElement | null;
+
+        if (playerItem) {
+          playerItem.remove();
+        }
+
+        if (payload.old.id === playerId) {
+          window.location.href = "/parties";
+        }
+      }
+    };
+
+    supabase
+      .channel("parties_realtime")
+      .on(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
+          schema: "public",
+          table: "parties",
+        },
+        handlePartyRealtime,
+      )
+      .subscribe();
+
+    supabase
+      .channel("parties_players_realtime")
+      .on(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
+          schema: "public",
+          table: "parties_players",
+        },
+        handlePartyPlayersRealtime,
+      )
+      .subscribe();
+  })();
+</script>

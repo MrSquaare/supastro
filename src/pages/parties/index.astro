@@ -1,0 +1,92 @@
+---
+import { actions } from "astro:actions";
+
+const parties = await Astro.callAction(actions.parties.list, {});
+
+import { getPartiesItemHTML } from "../../components/parties/item";
+---
+
+<head>
+  <title>Parties - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    parties.error ? (
+      <p>{parties.error.message}</p>
+    ) : (
+      <div class="container mx-auto p-8">
+        <h1 class="mb-4 text-4xl font-bold">Parties</h1>
+        <div>
+          <ul id="parties" class="space-y-4">
+            {parties.data?.map((party) => (
+              <Fragment set:html={getPartiesItemHTML(party)} />
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
+  }
+</body>
+
+<script>
+  import {
+    REALTIME_LISTEN_TYPES,
+    REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+    type RealtimePostgresChangesPayload,
+  } from "@supabase/supabase-js";
+
+  import { getPartiesItemHTML } from "../../components/parties/item";
+  import { supabase } from "../../lib/supabase/client";
+  import type { Database } from "../../lib/supabase/types";
+
+  (async () => {
+    const handlePartyRealtime = (
+      payload: RealtimePostgresChangesPayload<
+        Database["public"]["Tables"]["parties"]["Row"]
+      >,
+    ) => {
+      if (payload.eventType === "INSERT") {
+        const partyItem = document.createElement("li");
+
+        partyItem.outerHTML = getPartiesItemHTML(payload.new);
+
+        document.querySelector("#parties")?.appendChild(partyItem);
+      }
+
+      if (payload.eventType === "UPDATE") {
+        const partyItem = document.querySelector(
+          `[data-party-item="${payload.new.id}"]`,
+        ) as HTMLLIElement;
+
+        if (partyItem) {
+          partyItem.outerHTML = getPartiesItemHTML(payload.new);
+        }
+      }
+
+      if (payload.eventType === "DELETE") {
+        const partyItem = document.querySelector(
+          `[data-party-item="${payload.old.id}"]`,
+        ) as HTMLLIElement;
+
+        if (partyItem) {
+          partyItem.remove();
+        }
+      }
+    };
+
+    supabase
+      .channel("parties_realtime")
+      .on(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
+          schema: "public",
+          table: "parties",
+        },
+        handlePartyRealtime,
+      )
+      .subscribe();
+  })();
+</script>

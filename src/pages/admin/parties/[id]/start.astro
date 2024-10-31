@@ -1,0 +1,78 @@
+---
+import type { ActionError } from "astro:actions";
+import { actions } from "astro:actions";
+
+import type { AdminPartiesStartInput } from "../../../../actions/admin/parties/start";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.admin.parties.get, {
+  id: partyId,
+});
+
+if (party.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect("/admin/auth/login");
+}
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/admin/parties");
+}
+
+let startError: ActionError<AdminPartiesStartInput> | undefined;
+
+if (Astro.request.method === "POST") {
+  const { error } = await Astro.callAction(actions.admin.parties.start, {
+    id: partyId,
+  });
+
+  if (error) {
+    startError = error;
+  } else {
+    return Astro.redirect("/admin/parties");
+  }
+}
+---
+
+<head>
+  <title>Confirm start party? - Admin - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    party.error ? (
+      <p>{party.error.message}</p>
+    ) : (
+      <div class="flex h-screen w-screen flex-col items-center justify-center">
+        {startError ? (
+          <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+            {startError.code}: {startError.message}
+          </div>
+        ) : (
+          <div class="w-[350px] rounded-base border-2 border-border bg-slate-300 p-4 text-black">
+            <form method="post">
+              <p class="mb-4 text-xl">
+                Are you sure you want to start the party{" "}
+                <span class="font-bold">{party.data.name}</span>?
+              </p>
+              <div class="space-x-2">
+                <button
+                  type="submit"
+                  class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Start
+                </button>
+                <a
+                  href="/admin/parties"
+                  class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Cancel
+                </a>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    )
+  }
+</body>

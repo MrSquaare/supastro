@@ -1,0 +1,104 @@
+---
+import { isInputError, actions, ActionError } from "astro:actions";
+import type { ActionInputError } from "astro:actions";
+
+import type { AdminPartiesCreateInput } from "../../../actions/admin/parties/create";
+
+const user = await Astro.callAction(actions.admin.user.get, {});
+
+if (user.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect("/admin/auth/login");
+}
+
+let createError: ActionError<AdminPartiesCreateInput> | undefined;
+let formError: ActionInputError<AdminPartiesCreateInput> | undefined;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const { error } = await Astro.callAction(actions.admin.parties.create, {
+    name: formData.get("name") as string,
+    password: formData.get("password") as string,
+  });
+
+  if (error) {
+    createError = error;
+    formError = isInputError(error) ? error : undefined;
+  } else {
+    return Astro.redirect("/admin/parties");
+  }
+}
+---
+
+<head>
+  <title>Create party - Admin - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    user.error ? (
+      <p>{user.error.message}</p>
+    ) : (
+      <div class="flex h-screen w-screen flex-col items-center justify-center">
+        <h1 class="mb-4 text-center text-4xl">
+          <span class="font-bold">Admin</span> - Create party
+        </h1>
+        <div class="w-[350px]">
+          {formError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              Please check the form
+            </div>
+          ) : createError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              {createError.code}: {createError.message}
+            </div>
+          ) : null}
+          <div class="rounded-base border-2 border-border bg-slate-300 p-4 text-black">
+            <form method="post">
+              <div class="mb-2 space-y-1.5">
+                <label
+                  for="email"
+                  class="text-sm font-heading leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  class="flex h-10 w-full rounded-base border-2 border-border bg-white px-3 py-2 text-sm font-base text-text ring-offset-white selection:bg-slate-300 selection:text-black file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formError?.fields.name ? <p>{formError.fields.name}</p> : null}
+              </div>
+              <div class="mb-2 space-y-1.5">
+                <label
+                  for="password"
+                  class="text-sm font-heading leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  class="flex h-10 w-full rounded-base border-2 border-border bg-white px-3 py-2 text-sm font-base text-text ring-offset-white selection:bg-slate-300 selection:text-black file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formError?.fields.password ? (
+                  <p>{formError.fields.password}</p>
+                ) : null}
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  class="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</body>

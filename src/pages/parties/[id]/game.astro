@@ -1,0 +1,278 @@
+---
+import { actions } from "astro:actions";
+
+import TargetItem from "../../../components/parties/TargetItem.astro";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status !== "RUNNING") {
+  return Astro.redirect(`/parties/${partyId}`);
+}
+
+const player = await Astro.callAction(actions.parties.player.get, {
+  partyId: partyId,
+});
+
+if (player.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect(`/parties/${partyId}/join`);
+}
+
+if (player.error?.code === "NOT_FOUND") {
+  return Astro.redirect(`/parties/${partyId}/player`);
+}
+
+const targetInfos = [
+  {
+    target: "angular",
+    name: "Angular",
+    bgColor: "bg-red-400",
+  },
+  {
+    target: "react",
+    name: "React",
+    bgColor: "bg-blue-400",
+  },
+  {
+    target: "svelte",
+    name: "Svelte",
+    bgColor: "bg-orange-400",
+  },
+  {
+    target: "vue",
+    name: "Vue",
+    bgColor: "bg-green-400",
+  },
+];
+
+const targetInitialValues = await Promise.all(
+  targetInfos.map(async (target) => {
+    return await Astro.callAction(actions.parties.data.get, {
+      id: partyId,
+      target: target.target,
+    }).then((response) => response.data?.value);
+  }),
+);
+
+const targets = targetInfos.map((target, index) => ({
+  target: target.target,
+  name: target.name,
+  bgColor: target.bgColor,
+  initialValue: Number(targetInitialValues[index] || "0"),
+}));
+---
+
+<head>
+  <title>
+    {party.error ? "Error - Supastro" : `Game - ${party.data?.name} - Supastro`}
+  </title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body class="h-screen w-screen">
+  {
+    player.error ? (
+      <p>Player error: {player.error.message}</p>
+    ) : party.error ? (
+      <p>Party error: {party.error.message}</p>
+    ) : (
+      <>
+        <span
+          id="contextData"
+          data-party-id={partyId}
+          data-player-id={player.data.id}
+          class="hidden"
+        />
+        <div class="container mx-auto flex h-full flex-col p-8">
+          <h1 class="mb-4 text-4xl">
+            <span id="partyTitle" class="font-bold">
+              {party.data.name}
+            </span>
+            {" - "}
+            Game
+          </h1>
+          <div class="my-auto flex flex-1 flex-col items-center justify-center p-8">
+            <div class="grid w-full grid-cols-1 gap-x-4 gap-y-8 md:grid-cols-2 lg:grid-cols-4">
+              {targets.map((target) => (
+                <TargetItem
+                  target={target.target}
+                  name={target.name}
+                  bgColor={target.bgColor}
+                  initialValue={String(target.initialValue)}
+                  game
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+</body>
+
+<script>
+  import {
+    REALTIME_LISTEN_TYPES,
+    REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+    type RealtimePostgresChangesPayload,
+  } from "@supabase/supabase-js";
+  import { actions } from "astro:actions";
+  import Cookies from "js-cookie";
+
+  import { supabase } from "../../../lib/supabase/client";
+  import type { Database } from "../../../lib/supabase/types";
+
+  (async () => {
+    const contextData = document.querySelector(
+      "#contextData",
+    ) as HTMLElement | null;
+    const partyId = Number(contextData?.dataset.partyId);
+    const playerId = Number(contextData?.dataset.playerId);
+
+    if (isNaN(partyId) || isNaN(playerId)) {
+      return;
+    }
+
+    const accessToken = Cookies.get(`party_${partyId}_access_token`);
+    const refreshToken = Cookies.get(`party_${partyId}_refresh_token`);
+
+    if (!accessToken || !refreshToken) {
+      window.location.href = "/parties";
+
+      return;
+    }
+
+    await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    const incrementButtons = document.querySelectorAll(
+      "[data-increment-button]",
+    ) as NodeListOf<HTMLButtonElement>;
+    const decrementButtons = document.querySelectorAll(
+      "[data-decrement-button]",
+    ) as NodeListOf<HTMLButtonElement>;
+
+    incrementButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = button.dataset.target;
+
+        if (!target) {
+          return;
+        }
+
+        const { error } = await actions.parties.data.increment({
+          id: partyId,
+          target: target,
+        });
+
+        if (error) {
+          console.error(error);
+        }
+      });
+    });
+
+    decrementButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = button.dataset.target;
+
+        if (!target) {
+          return;
+        }
+
+        const { error } = await actions.parties.data.decrement({
+          id: partyId,
+          target: target,
+        });
+
+        if (error) {
+          console.error(error);
+        }
+      });
+    });
+
+    const handlePartyRealtime = (
+      payload: RealtimePostgresChangesPayload<
+        Database["public"]["Tables"]["parties"]["Row"]
+      >,
+    ) => {
+      if (payload.eventType === "UPDATE") {
+        if (payload.new.id !== partyId) {
+          return;
+        }
+
+        const title = document.querySelector(
+          "#partyTitle",
+        ) as HTMLElement | null;
+
+        if (title) {
+          title.innerText = payload.new.name;
+        }
+
+        if (payload.new.status !== "RUNNING") {
+          window.location.href = `/parties/${partyId}`;
+        }
+      }
+
+      if (payload.eventType === "DELETE") {
+        if (payload.old.id !== partyId) {
+          return;
+        }
+
+        window.location.href = "/parties";
+      }
+    };
+
+    const handlePartyDataRealtime = (
+      payload: RealtimePostgresChangesPayload<
+        Database["public"]["Tables"]["parties_data"]["Row"]
+      >,
+    ) => {
+      if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+        if (payload.new.party_id !== partyId) {
+          return;
+        }
+
+        const targetValue = document.querySelector(
+          `[data-target="${payload.new.name}"]`,
+        ) as HTMLElement | null;
+
+        if (targetValue) {
+          targetValue.innerText = `${payload.new.value}`;
+        }
+      }
+    };
+
+    supabase
+      .channel("parties_realtime")
+      .on(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
+          schema: "public",
+          table: "parties",
+        },
+        handlePartyRealtime,
+      )
+      .subscribe();
+
+    supabase
+      .channel("parties_data_realtime")
+      .on(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        {
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
+          schema: "public",
+          table: "parties_data",
+        },
+        handlePartyDataRealtime,
+      )
+      .subscribe();
+  })();
+</script>

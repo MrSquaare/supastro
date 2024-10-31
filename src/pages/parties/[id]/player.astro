@@ -1,0 +1,179 @@
+---
+import type { ActionInputError, ActionError } from "astro:actions";
+import { isInputError, actions } from "astro:actions";
+
+import type { PartiesPlayerSetInput } from "../../../actions/parties/player/set";
+import { getRandomNumber } from "../../../lib/number/random";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+const player = await Astro.callAction(actions.parties.player.get, {
+  partyId: partyId,
+});
+
+if (player.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect(`/parties/${partyId}/join`);
+}
+
+let initialName = player.data?.name;
+let initialAvatarId = player.data?.avatar_id || String(getRandomNumber(0, 100));
+
+let setPlayerError: ActionError<PartiesPlayerSetInput> | undefined;
+let formError: ActionInputError<PartiesPlayerSetInput> | undefined;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const name = formData.get("name") as string;
+  const avatarId = formData.get("avatarId") as string;
+  const { error } = await Astro.callAction(actions.parties.player.set, {
+    partyId: partyId,
+    name: name,
+    avatarId: avatarId,
+  });
+
+  initialName = name;
+  initialAvatarId = avatarId;
+
+  if (error) {
+    setPlayerError = error;
+    formError = isInputError(error) ? error : undefined;
+  } else {
+    return Astro.redirect(`/parties/${partyId}`);
+  }
+}
+---
+
+<head>
+  <title>
+    {
+      party.error
+        ? "Error - Supastro"
+        : `Player - ${party.data?.name} - Supastro`
+    }
+  </title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<div>
+  {
+    party.error ? (
+      <p>{party.error.message}</p>
+    ) : player.error && player.error.code !== "NOT_FOUND" ? (
+      <p>{player.error}</p>
+    ) : (
+      <div class="flex h-screen w-screen flex-col items-center justify-center">
+        <h1 class="mb-4 text-center text-4xl">
+          <span class="font-bold">{party.data.name}</span> - Player
+        </h1>
+        <div class="w-[350px]">
+          {formError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              Please check the form
+            </div>
+          ) : setPlayerError ? (
+            <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+              {setPlayerError.code}: {setPlayerError.message}
+            </div>
+          ) : null}
+          <div class="rounded-base border-2 border-border bg-main p-4 text-black shadow-light">
+            <form method="post">
+              <div class="flex flex-col items-center">
+                <input
+                  type="hidden"
+                  id="avatarId"
+                  name="avatarId"
+                  value={initialAvatarId}
+                />
+                <div class="relative mb-4">
+                  <img
+                    id="avatarImage"
+                    src={`https://api.multiavatar.com/${initialAvatarId}.svg`}
+                    alt="Avatar"
+                    class="relative flex size-48 shrink-0 overflow-hidden rounded-full outline outline-2 outline-black"
+                  />
+                  <div class="absolute inset-x-0 -bottom-3 flex flex-col items-center">
+                    <button
+                      id="avatarChange"
+                      type="button"
+                      class=" inline-flex items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+                {formError?.fields.avatarId ? (
+                  <p>{formError.fields.avatarId}</p>
+                ) : null}
+              </div>
+              <div class="mb-2 space-y-1.5">
+                <label
+                  for="name"
+                  class="text-sm font-heading leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={initialName}
+                  class="flex h-10 w-full rounded-base border-2 border-border bg-white px-3 py-2 text-sm font-base text-text ring-offset-white selection:bg-main selection:text-black file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formError?.fields.name ? <p>{formError.fields.name}</p> : null}
+              </div>
+              <div class="space-y-2">
+                <button
+                  type="submit"
+                  class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Save
+                </button>
+                {player.data ? (
+                  <a
+                    href={`/parties/${partyId}`}
+                    class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    Cancel
+                  </a>
+                ) : null}
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</div>
+
+<script>
+  import { getRandomNumber } from "../../../lib/number/random";
+
+  (async () => {
+    const avatarIdInput = document.getElementById(
+      "avatarId",
+    ) as HTMLInputElement | null;
+    const avatarImage = document.getElementById(
+      "avatarImage",
+    ) as HTMLImageElement | null;
+    const avatarChangeButton = document.getElementById(
+      "avatarChange",
+    ) as HTMLButtonElement | null;
+
+    if (!avatarIdInput || !avatarImage || !avatarChangeButton) {
+      return;
+    }
+
+    avatarChangeButton.addEventListener("click", () => {
+      const newAvatarId = getRandomNumber(0, 100, Number(avatarIdInput.value));
+
+      avatarIdInput.value = String(newAvatarId);
+      avatarImage.src = `https://api.multiavatar.com/${newAvatarId}.svg`;
+    });
+  })();
+</script>

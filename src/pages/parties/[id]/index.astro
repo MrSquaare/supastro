@@ -1,0 +1,25 @@
+---
+import { actions } from "astro:actions";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status === "OPEN") {
+  return Astro.redirect(`/parties/${partyId}/lobby`);
+}
+
+if (party.data?.status === "RUNNING") {
+  return Astro.redirect(`/parties/${partyId}/game`);
+}
+
+if (party.data?.status === "CLOSE") {
+  return Astro.redirect(`/parties/${partyId}/results`);
+}
+
+return Astro.redirect("/parties");
+---

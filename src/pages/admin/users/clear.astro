@@ -1,0 +1,58 @@
+---
+import { actions } from "astro:actions";
+
+const user = await Astro.callAction(actions.admin.user.get, {});
+
+if (user.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect("/admin/auth/login");
+}
+
+const clearResult = Astro.getActionResult(actions.admin.auth.login);
+const clearError = clearResult?.error;
+---
+
+<head>
+  <title>Confirm clear all users? - Admin - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    user.error ? (
+      <p>{user.error.message}</p>
+    ) : (
+      <div class="flex h-screen w-screen flex-col items-center justify-center">
+        {clearError ? (
+          <div class="relative mb-2 w-full rounded-base border-2 border-border bg-red-400 p-4 text-black">
+            {clearError.code}: {clearError.message}
+          </div>
+        ) : (
+          <div class="w-[350px] rounded-base border-2 border-border bg-slate-300 p-4 text-black">
+            <form
+              method="post"
+              action={"/admin/users" + actions.admin.users.clear}
+            >
+              <p class="mb-4 text-xl">
+                Are you sure you want to clear all users?
+              </p>
+              <div class="space-x-2">
+                <button
+                  type="submit"
+                  class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Clear
+                </button>
+                <a
+                  href="/admin/users"
+                  class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-white px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Cancel
+                </a>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    )
+  }
+</body>

@@ -1,0 +1,45 @@
+---
+type Props = {
+  target: string;
+  name: string;
+  bgColor: string;
+  initialValue?: string;
+  game?: boolean;
+};
+
+const { target, name, bgColor, initialValue, game } = Astro.props;
+---
+
+<div class="relative flex-1">
+  <div
+    class:list={[
+      "relative flex w-full flex-col items-center rounded-base border-2 border-border p-4 text-black shadow-light",
+      bgColor,
+    ]}
+  >
+    <h3 class="mb-2 text-2xl font-bold">{name}</h3>
+    <p data-value data-target={target} class="mb-4 text-8xl font-bold">
+      {initialValue || 0}
+    </p>
+  </div>
+  {
+    game ? (
+      <div class="absolute inset-x-0 -bottom-5 flex w-full justify-center gap-4">
+        <button
+          data-increment-button
+          data-target={target}
+          class="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-green-400 px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+        >
+          Support
+        </button>
+        <button
+          data-decrement-button
+          data-target={target}
+          class="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text shadow-light ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+        >
+          Hate
+        </button>
+      </div>
+    ) : null
+  }
+</div>

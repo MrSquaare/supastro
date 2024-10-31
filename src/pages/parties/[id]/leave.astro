@@ -1,0 +1,29 @@
+---
+import { actions } from "astro:actions";
+
+const partyId = Number(Astro.params.id as string);
+
+const party = await Astro.callAction(actions.parties.get, { id: partyId });
+
+if (party.error?.code === "NOT_FOUND") {
+  return Astro.redirect("/parties");
+}
+
+if (party.data?.status !== "OPEN") {
+  return Astro.redirect("/parties");
+}
+
+const user = await Astro.callAction(actions.parties.user.get, {
+  partyId: partyId,
+});
+
+if (user.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect(`/parties/${partyId}/join`);
+}
+
+await Astro.callAction(actions.parties.leave, {
+  id: partyId,
+});
+
+return Astro.redirect("/parties");
+---

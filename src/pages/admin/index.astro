@@ -1,0 +1,53 @@
+---
+import { actions } from "astro:actions";
+
+const user = await Astro.callAction(actions.admin.user.get, {});
+
+if (user.error?.code === "UNAUTHORIZED") {
+  return Astro.redirect("/admin/auth/login");
+}
+---
+
+<head>
+  <title>Dashboard - Admin - Supastro</title>
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+  {
+    user.error ? (
+      <p>{user.error.message}</p>
+    ) : (
+      <div class="container mx-auto p-8">
+        <div class="mb-4 flex justify-between">
+          <h1 class="text-4xl">
+            <span class="font-bold">Admin</span> - Dashboard
+          </h1>
+          <form method="post" action={"/admin" + actions.admin.auth.logout}>
+            <button
+              type="submit"
+              class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            >
+              Logout
+            </button>
+          </form>
+        </div>
+        <h2 class="mb-2 text-2xl">Modules</h2>
+        <div class="flex gap-4">
+          <a
+            href="/admin/parties"
+            class="inline-flex size-64 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-slate-300 p-8 text-xl font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Parties
+          </a>
+          <a
+            href="/admin/users"
+            class="inline-flex size-64 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-slate-300 p-8 text-xl font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Users
+          </a>
+        </div>
+      </div>
+    )
+  }
+</body>
