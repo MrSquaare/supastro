@@ -1,7 +1,8 @@
 ---
 import { actions } from "astro:actions";
 
-import TargetItem from "../../../components/parties/TargetItem.astro";
+import TargetCard from "../../../components/parties/TargetCard.astro";
+import { targetInfos } from "../../../constants/targets";
 
 const partyId = Number(Astro.params.id as string);
 
@@ -14,29 +15,6 @@ if (party.error?.code === "NOT_FOUND") {
 if (party.data?.status !== "CLOSE") {
   return Astro.redirect(`/parties/${partyId}`);
 }
-
-const targetInfos = [
-  {
-    target: "angular",
-    name: "Angular",
-    bgColor: "bg-red-400",
-  },
-  {
-    target: "react",
-    name: "React",
-    bgColor: "bg-blue-400",
-  },
-  {
-    target: "svelte",
-    name: "Svelte",
-    bgColor: "bg-orange-400",
-  },
-  {
-    target: "vue",
-    name: "Vue",
-    bgColor: "bg-green-400",
-  },
-];
 
 const targetInitialValues = await Promise.all(
   targetInfos.map(async (target) => {
@@ -51,10 +29,9 @@ const targets = targetInfos
   .map((target, index) => ({
     target: target.target,
     name: target.name,
-    bgColor: target.bgColor,
-    initialValue: Number(targetInitialValues[index] || "0"),
+    initialValue: targetInitialValues[index] || "0",
   }))
-  .sort((a, b) => b.initialValue - a.initialValue);
+  .sort((a, b) => Number(b.initialValue) - Number(a.initialValue));
 
 const bestPlayers = await Astro.callAction(actions.parties.data.bestPlayers, {
   id: partyId,
@@ -95,11 +72,9 @@ const bestPlayers = await Astro.callAction(actions.parties.data.bestPlayers, {
           </h2>
           <div class="mb-16 grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {targets.map((target) => (
-              <TargetItem
+              <TargetCard
                 target={target.target}
-                name={target.name}
-                bgColor={target.bgColor}
-                initialValue={String(target.initialValue)}
+                initialValue={target.initialValue}
               />
             ))}
           </div>

@@ -7,8 +7,12 @@ if (user.error?.code === "UNAUTHORIZED") {
   return Astro.redirect("/admin/auth/login");
 }
 
-const clearResult = Astro.getActionResult(actions.admin.auth.login);
+const clearResult = Astro.getActionResult(actions.admin.users.clear);
 const clearError = clearResult?.error;
+
+if (clearResult && !clearError) {
+  return Astro.redirect("/admin/users");
+}
 ---
 
 <head>
@@ -28,10 +32,7 @@ const clearError = clearResult?.error;
           </div>
         ) : (
           <div class="w-[350px] rounded-base border-2 border-border bg-slate-300 p-4 text-black">
-            <form
-              method="post"
-              action={"/admin/users" + actions.admin.users.clear}
-            >
+            <form method="post" action={actions.admin.users.clear}>
               <p class="mb-4 text-xl">
                 Are you sure you want to clear all users?
               </p>

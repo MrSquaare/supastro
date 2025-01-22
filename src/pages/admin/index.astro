@@ -23,7 +23,7 @@ if (user.error?.code === "UNAUTHORIZED") {
           <h1 class="text-4xl">
             <span class="font-bold">Admin</span> - Dashboard
           </h1>
-          <form method="post" action={"/admin" + actions.admin.auth.logout}>
+          <form method="post" action={actions.admin.auth.logout}>
             <button
               type="submit"
               class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-red-400 px-4 py-2 text-sm font-base text-text ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"

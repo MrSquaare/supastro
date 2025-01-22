@@ -1,13 +1,16 @@
+/* eslint-disable import-x/no-named-as-default-member */
 import js from "@eslint/js";
 import astro from "eslint-plugin-astro";
 import importX from "eslint-plugin-import-x";
 import prettier from "eslint-plugin-prettier/recommended";
+import svelte from "eslint-plugin-svelte";
 import tailwind from "eslint-plugin-tailwindcss";
+import vue from "eslint-plugin-vue";
 import globals from "globals";
 import ts from "typescript-eslint";
 
 export default [
-  { files: ["**/*.{js,mjs,cjs,ts}"] },
+  { files: ["**/*.{js,mjs,cjs,ts,jsx,tsx,svelte,vue}"] },
   { ignores: ["dist", ".astro"] },
   {
     languageOptions: {
@@ -21,7 +24,6 @@ export default [
   ...ts.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
-  prettier,
   ...tailwind.configs["flat/recommended"],
   {
     rules: {
@@ -35,14 +37,35 @@ export default [
       ],
     },
   },
+  ...svelte.configs["flat/recommended"],
   {
-    ...astro.configs.recommended,
-    files: ["*.astro"],
-    processor: "astro/client-side-ts",
-    parser: "astro-eslint-parser",
-    parserOptions: {
-      parser: "@typescript-eslint/parser",
-      extraFileExtensions: [".astro"],
+    files: ["*.svelte", "**/*.svelte"],
+    languageOptions: {
+      parserOptions: {
+        parser: ts.parser,
+        extraFileExtensions: [".svelte"],
+      },
+    },
+  },
+  ...vue.configs["flat/recommended"],
+  {
+    files: ["*.vue", "**/*.vue"],
+    languageOptions: {
+      parserOptions: {
+        parser: ts.parser,
+        extraFileExtensions: [".vue"],
+      },
+    },
+  },
+  prettier,
+  ...astro.configs["flat/recommended"],
+  {
+    files: ["*.astro", "**/*.astro"],
+    languageOptions: {
+      parserOptions: {
+        parser: ts.parser,
+        extraFileExtensions: [".astro"],
+      },
     },
   },
 ];

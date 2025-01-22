@@ -45,26 +45,7 @@ pnpm build
 
 ## Using
 
-1. Set required environment vars to [`wrangler.toml`](./wrangler.toml)
-
-```toml
-# ...
-
-[vars]
-SUPASTRO_SERVER_URL = "supabase_url"
-SUPASTRO_CLIENT_URL = "supabase_url"
-SUPASTRO_CLIENT_KEY = "supabase_anon_key"
-
-# ...
-```
-
-2. Set required secrets to `.dev.vars`
-
-```text
-SUPASTRO_SERVER_KEY="supabase_service_key"
-```
-
-3. Launch the Wrangler preview:
+1. Launch the Wrangler preview:
 
 ```shell script
 pnpm preview

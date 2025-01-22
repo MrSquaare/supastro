@@ -37,7 +37,7 @@ const formError = isInputError(loginError) ? loginError : null;
       <div
         class="rounded-base border-2 border-border bg-slate-300 p-4 text-black shadow-light"
       >
-        <form method="post" action={"/admin" + actions.admin.auth.login}>
+        <form method="post" action={actions.admin.auth.login}>
           <div class="mb-2 space-y-1.5">
             <label
               for="email"

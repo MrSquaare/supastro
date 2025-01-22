@@ -1,14 +1,14 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "supastro"
-compatibility_date = "2024-10-22"
+compatibility_date = "2025-01-21"
 compatibility_flags = ["nodejs_compat_v2"]
 main = "./dist/_worker.js/index.js"
 assets = { directory = "./dist", binding = "ASSETS" }
 
 [vars]
-SUPASTRO_SERVER_URL = "https://ssyrqfqhulpmrkwufvrd.supabase.co"
-SUPASTRO_CLIENT_URL = "https://ssyrqfqhulpmrkwufvrd.supabase.co"
-SUPASTRO_CLIENT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzeXJxZnFodWxwbXJrd3VmdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzAwNTc0MjAsImV4cCI6MjA0NTYzMzQyMH0.J-6F-xZWXRFfQb7tfcFy7FWtT7DMC5_nxztPsjSiTQg"
+SUPABASE_SERVER_URL = "https://ssyrqfqhulpmrkwufvrd.supabase.co"
+SUPABASE_CLIENT_URL = "https://ssyrqfqhulpmrkwufvrd.supabase.co"
+SUPABASE_CLIENT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzeXJxZnFodWxwbXJrd3VmdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzAwNTc0MjAsImV4cCI6MjA0NTYzMzQyMH0.J-6F-xZWXRFfQb7tfcFy7FWtT7DMC5_nxztPsjSiTQg"
 
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/

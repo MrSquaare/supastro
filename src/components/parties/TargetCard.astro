@@ -1,27 +1,35 @@
 ---
+import AngularCardComponent from "../card/AngularCard/AngularCard.component";
+import ReactCard from "../card/ReactCard";
+import SvelteCard from "../card/SvelteCard.svelte";
+import VueCard from "../card/VueCard.vue";
+
 type Props = {
   target: string;
-  name: string;
-  bgColor: string;
-  initialValue?: string;
+  initialValue: string;
   game?: boolean;
 };
 
-const { target, name, bgColor, initialValue, game } = Astro.props;
+const { target, initialValue, game } = Astro.props;
 ---
 
 <div class="relative flex-1">
-  <div
-    class:list={[
-      "relative flex w-full flex-col items-center rounded-base border-2 border-border p-4 text-black shadow-light",
-      bgColor,
-    ]}
-  >
-    <h3 class="mb-2 text-2xl font-bold">{name}</h3>
-    <p data-value data-target={target} class="mb-4 text-8xl font-bold">
-      {initialValue || 0}
-    </p>
-  </div>
+  {
+    target == "angular" ? (
+      <AngularCardComponent dataTarget={target} initialValue={initialValue} />
+    ) : target == "react" ? (
+      <ReactCard dataTarget={target} initialValue={initialValue} />
+    ) : target == "svelte" ? (
+      <SvelteCard dataTarget={target} initialValue={initialValue} />
+    ) : target == "vue" ? (
+      <VueCard dataTarget={target} initialValue={initialValue} />
+    ) : (
+      <div class="flex h-full items-center justify-center">
+        <p class="text-lg font-bold text-text">Target not found</p>
+      </div>
+    )
+  }
+
   {
     game ? (
       <div class="absolute inset-x-0 -bottom-5 flex w-full justify-center gap-4">
