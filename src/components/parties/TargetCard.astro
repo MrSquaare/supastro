@@ -18,11 +18,7 @@ const { target, initialValue, game } = Astro.props;
     target == "angular" ? (
       <AngularCardComponent dataTarget={target} initialValue={initialValue} />
     ) : target == "react" ? (
-      <ReactCard
-        client:only="react"
-        dataTarget={target}
-        initialValue={initialValue}
-      />
+      <ReactCard dataTarget={target} initialValue={initialValue} />
     ) : target == "svelte" ? (
       <SvelteCard dataTarget={target} initialValue={initialValue} />
     ) : target == "vue" ? (
